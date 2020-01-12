@@ -41,6 +41,7 @@ f._id=d._fact_id"""):
         frontback = []
         vocabulary = []
         cloze = {}
+        unknown_facts = {} # id: notecount
         for row in db.execute("""
 select _fact_id, fact_view_id, tags, next_rep, last_rep, easiness,
 acq_reps+ret_reps, lapses, card_type_id from cards"""):
@@ -55,6 +56,10 @@ acq_reps+ret_reps, lapses, card_type_id from cards"""):
                     vocabulary.append(note)
                 elif row[1].startswith("5.1"):
                     cloze[row[0]] = note
+                else:
+                    if row[1] not in unknown_facts:
+                        unknown_facts[row[1]] = 0
+                    unknown_facts[row[1]] += 1
             # check for None to fix issue where import can error out
             rawTags = row[2]
             if rawTags is None:
@@ -94,6 +99,9 @@ acq_reps+ret_reps, lapses, card_type_id from cards"""):
         self.total += total
         self._addCloze(cloze)
         self.total += total
+        for fid, count in unknown_facts.items():
+            self.log.append(ngettext("Ignored %d note with unknown fact ID %s.", "Ignored %d notes with unknown fact ID %s.", count) % (count, fid))
+
         self.log.append(ngettext("%d note imported.", "%d notes imported.", self.total) % self.total)
 
     def fields(self):
