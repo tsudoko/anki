@@ -40,6 +40,7 @@ f._id=d._fact_id"""):
         front = []
         frontback = []
         vocabulary = []
+        map_ = []
         cloze = {}
         unknown_facts = {} # id: notecount
         for row in db.execute("""
@@ -54,6 +55,8 @@ acq_reps+ret_reps, lapses, card_type_id from cards"""):
                     frontback.append(note)
                 elif row[1].startswith("3.") or row[1].startswith("3::"):
                     vocabulary.append(note)
+                elif row[1].startswith("4.1"):
+                    map_.append(note)
                 elif row[1].startswith("5.1"):
                     cloze[row[0]] = note
                 else:
@@ -96,6 +99,8 @@ acq_reps+ret_reps, lapses, card_type_id from cards"""):
         self._addFrontBacks(frontback)
         total += self.total
         self._addVocabulary(vocabulary)
+        self.total += total
+        self._addMaps(map_)
         self.total += total
         self._addCloze(cloze)
         self.total += total
@@ -150,6 +155,26 @@ acq_reps+ret_reps, lapses, card_type_id from cards"""):
         t['afmt'] = t['qfmt'] + "\n\n<hr id=answer>\n\n{{Front}}"
         mm.addTemplate(m, t)
         self._addFronts(notes, m)
+
+    def _addMaps(self, notes):
+        mm = self.col.models
+        m = mm.new("Mnemosyne-Map")
+        for f in "Location", "Blank map", "Marked map":
+            fm = mm.newField(f)
+            mm.addField(m, fm)
+        t = mm.newTemplate("Recognition")
+        t['qfmt'] = "{{Marked map}}"
+        t['afmt'] = t['qfmt'] + """\n\n<hr id=answer>\n\n\
+{{Location}}"""
+        mm.addTemplate(m, t)
+        t = mm.newTemplate("Production")
+        t['qfmt'] = """{{Blank map}}\n\n<hr>\n\n\
+{{Location}}"""
+        t['afmt'] = """{{Marked map}}\n\n<hr>\n\n\
+{{Location}}"""
+        mm.addTemplate(m, t)
+        mm.add(m)
+        self._addFronts(notes, m, fields=("loc", "blank", "marked"))
 
     def _addVocabulary(self, notes):
         mm = self.col.models
